@@ -217,6 +217,14 @@ public:
     auto Found = std::lower_bound(ProcDesc.begin(), ProcDesc.end(), CPU);
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
   }
+
+  ArrayRef<SubtargetFeatureKV> getCPUTable() const {
+    return ProcDesc;
+  }
+
+  ArrayRef<SubtargetFeatureKV> getFeatureTable() const {
+    return ProcFeatures;
+  }
 };
 
 } // end namespace llvm
