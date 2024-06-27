@@ -163,6 +163,41 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, T, Expand);
   }
 
+  if (Subtarget->hasAlexMisc()) {
+    setOperationAction(ISD::BSWAP, MVT::i32, Legal);
+    setOperationAction(ISD::BSWAP, MVT::i64, Legal);
+    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Custom);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Custom);
+    setOperationAction(ISD::MULHS, MVT::i64, Legal);
+    setOperationAction(ISD::MULHU, MVT::i64, Legal);
+  }
+
+  if (Subtarget->hasAlexOverflow()) {
+    for (auto Op :
+         {ISD::SADDO, ISD::UADDO, ISD::SSUBO, ISD::USUBO, ISD::SMULO,
+          ISD::UMULO})
+      for (auto T : {MVT::i32, MVT::i64})
+        setOperationAction(Op, T, Custom);
+  }
+
+  if (Subtarget->hasAlexCarry()) {
+    for (auto Op :
+         {ISD::UADDO_CARRY, ISD::SADDO_CARRY,
+          ISD::USUBO_CARRY, ISD::SSUBO_CARRY})
+      for (auto T : {MVT::i32, MVT::i64})
+        setOperationAction(Op, T, Custom);
+  }
+
+  if (Subtarget->hasAlex128()) {
+    setOperationAction(ISD::ADD, MVT::i128, Custom);
+    setOperationAction(ISD::SUB, MVT::i128, Custom);
+    setOperationAction(ISD::MUL, MVT::i128, Custom);
+  }
+
+  if (Subtarget->hasAlex128Cmp()) {
+    setOperationAction(ISD::SETCC, MVT::i128, Custom);
+  }
+
   if (Subtarget->hasNontrappingFPToInt())
     for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT})
       for (auto T : {MVT::i32, MVT::i64})
@@ -931,6 +966,34 @@ void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
   switch (Op.getOpcode()) {
   default:
     break;
+  case WebAssemblyISD::I32_ADD_OVERFLOW_U:
+  case WebAssemblyISD::I32_ADD_OVERFLOW_S:
+  case WebAssemblyISD::I32_SUB_OVERFLOW_U:
+  case WebAssemblyISD::I32_SUB_OVERFLOW_S:
+  case WebAssemblyISD::I32_MUL_OVERFLOW_U:
+  case WebAssemblyISD::I32_MUL_OVERFLOW_S:
+  case WebAssemblyISD::I64_ADD_OVERFLOW_U:
+  case WebAssemblyISD::I64_ADD_OVERFLOW_S:
+  case WebAssemblyISD::I64_SUB_OVERFLOW_U:
+  case WebAssemblyISD::I64_SUB_OVERFLOW_S:
+  case WebAssemblyISD::I64_MUL_OVERFLOW_U:
+  case WebAssemblyISD::I64_MUL_OVERFLOW_S:
+  case WebAssemblyISD::I32_ADD_WITH_CARRY_U:
+  case WebAssemblyISD::I32_ADD_WITH_CARRY_S:
+  case WebAssemblyISD::I32_SUB_WITH_CARRY_U:
+  case WebAssemblyISD::I32_SUB_WITH_CARRY_S:
+  case WebAssemblyISD::I64_ADD_WITH_CARRY_U:
+  case WebAssemblyISD::I64_ADD_WITH_CARRY_S:
+  case WebAssemblyISD::I64_SUB_WITH_CARRY_U:
+  case WebAssemblyISD::I64_SUB_WITH_CARRY_S:
+    // The second result, index 1, is known to be either 0 or 1 for these
+    // opcodes so indicate that all upper bits are known to be zero.
+    if (Op.getResNo() == 1)
+      Known = Known.trunc(1).zext(32);
+    break;
+  case WebAssemblyISD::SETCC128:
+    Known = Known.trunc(1).zext(32);
+    break;
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = Op.getConstantOperandVal(0);
     switch (IntNo) {
@@ -1431,6 +1494,11 @@ void WebAssemblyTargetLowering::ReplaceNodeResults(
     // Do not add any results, signifying that N should not be custom lowered.
     // EXTEND_VECTOR_INREG is implemented for some vectors, but not all.
     break;
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::MUL:
+    Results.push_back(Replace128Op(N, DAG));
+    break;
   default:
     llvm_unreachable(
         "ReplaceNodeResults not implemented for this op for WebAssembly!");
@@ -1507,6 +1575,21 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return DAG.UnrollVectorOp(Op.getNode());
   case ISD::CLEAR_CACHE:
     report_fatal_error("llvm.clear_cache is not supported on wasm");
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI:
+    return LowerMUL_LOHI(Op, DAG);
+  case ISD::SADDO:
+  case ISD::UADDO:
+  case ISD::SSUBO:
+  case ISD::USUBO:
+  case ISD::SMULO:
+  case ISD::UMULO:
+    return LowerOverflowingOp(Op, DAG);
+  case ISD::SADDO_CARRY:
+  case ISD::UADDO_CARRY:
+  case ISD::SSUBO_CARRY:
+  case ISD::USUBO_CARRY:
+    return LowerCarryOp(Op, DAG);
   }
 }
 
@@ -1603,6 +1686,135 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
         false);
 
   return Op;
+}
+
+SDValue WebAssemblyTargetLowering::LowerMUL_LOHI(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  assert(Subtarget->hasAlexMisc());
+  assert(Op.getValueType() == MVT::i64);
+  SDLoc DL(Op);
+  unsigned Opcode;
+  switch (Op.getOpcode()) {
+  case ISD::UMUL_LOHI:
+    Opcode = WebAssemblyISD::I64_MUL_WIDE_U;
+    break;
+  case ISD::SMUL_LOHI:
+    Opcode = WebAssemblyISD::I64_MUL_WIDE_S;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue Hi = DAG.getNode(Opcode, DL,
+                           DAG.getVTList(MVT::i64, MVT::i64), LHS, RHS);
+  SDValue Lo(Hi.getNode(), 1);
+  SDValue Ops[] = { Hi, Lo };
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue WebAssemblyTargetLowering::LowerOverflowingOp(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  assert(Subtarget->hasAlexOverflow());
+  auto ValTy = Op.getValueType();
+  assert(ValTy == MVT::i64 || ValTy == MVT::i32);
+  SDLoc DL(Op);
+  unsigned Opcode;
+  switch (Op.getOpcode()) {
+  case ISD::UADDO:
+    Opcode = ValTy == MVT::i32 ? WebAssemblyISD::I32_ADD_OVERFLOW_U : WebAssemblyISD::I64_ADD_OVERFLOW_U;
+    break;
+  case ISD::SADDO:
+    Opcode = ValTy == MVT::i32 ? WebAssemblyISD::I32_ADD_OVERFLOW_S : WebAssemblyISD::I64_ADD_OVERFLOW_S;
+    break;
+  case ISD::USUBO:
+    Opcode = ValTy == MVT::i32 ? WebAssemblyISD::I32_SUB_OVERFLOW_U : WebAssemblyISD::I64_SUB_OVERFLOW_U;
+    break;
+  case ISD::SSUBO:
+    Opcode = ValTy == MVT::i32 ? WebAssemblyISD::I32_SUB_OVERFLOW_S : WebAssemblyISD::I64_SUB_OVERFLOW_S;
+    break;
+  case ISD::UMULO:
+    Opcode = ValTy == MVT::i32 ? WebAssemblyISD::I32_MUL_OVERFLOW_U : WebAssemblyISD::I64_MUL_OVERFLOW_U;
+    break;
+  case ISD::SMULO:
+    Opcode = ValTy == MVT::i32 ? WebAssemblyISD::I32_MUL_OVERFLOW_S : WebAssemblyISD::I64_MUL_OVERFLOW_S;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue Result = DAG.getNode(Opcode, DL, DAG.getVTList(ValTy, MVT::i32), LHS, RHS);
+  SDValue Oflow(Result.getNode(), 1);
+  SDValue Ops[] = { Result, Oflow };
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue WebAssemblyTargetLowering::LowerCarryOp(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  assert(Subtarget->hasAlexCarry());
+  auto ValTy = Op.getValueType();
+  assert(ValTy == MVT::i64 || ValTy == MVT::i32);
+  SDLoc DL(Op);
+  unsigned Opcode;
+  switch (Op.getOpcode()) {
+  case ISD::UADDO_CARRY:
+    Opcode = ValTy == MVT::i32 ? WebAssemblyISD::I32_ADD_WITH_CARRY_U : WebAssemblyISD::I64_ADD_WITH_CARRY_U;
+    break;
+  case ISD::SADDO_CARRY:
+    Opcode = ValTy == MVT::i32 ? WebAssemblyISD::I32_ADD_WITH_CARRY_S : WebAssemblyISD::I64_ADD_WITH_CARRY_S;
+    break;
+  case ISD::USUBO_CARRY:
+    Opcode = ValTy == MVT::i32 ? WebAssemblyISD::I32_SUB_WITH_CARRY_U : WebAssemblyISD::I64_SUB_WITH_CARRY_U;
+    break;
+  case ISD::SSUBO_CARRY:
+    Opcode = ValTy == MVT::i32 ? WebAssemblyISD::I32_SUB_WITH_CARRY_S : WebAssemblyISD::I64_SUB_WITH_CARRY_S;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue Carry = Op.getOperand(2);
+  SDValue Result = DAG.getNode(Opcode, DL, DAG.getVTList(ValTy, MVT::i32), LHS, RHS, Carry);
+  SDValue Oflow(Result.getNode(), 1);
+  SDValue Ops[] = { Result, Oflow };
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue WebAssemblyTargetLowering::Replace128Op(SDNode *N,
+                                                SelectionDAG &DAG) const {
+  assert(Subtarget->hasAlex128());
+  auto ValTy = N->getValueType(0);
+  assert(ValTy == MVT::i128);
+  SDLoc DL(N);
+  unsigned Opcode;
+  switch (N->getOpcode()) {
+  case ISD::ADD:
+    Opcode = WebAssemblyISD::I64_ADD128;
+    break;
+  case ISD::SUB:
+    Opcode = WebAssemblyISD::I64_SUB128;
+    break;
+  case ISD::MUL:
+    Opcode = WebAssemblyISD::I64_MUL128;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  SDValue C0 = DAG.getConstant(0, DL, MVT::i64);
+  SDValue C1 = DAG.getConstant(1, DL, MVT::i64);
+  SDValue LHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, LHS, C0);
+  SDValue LHS_1 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, LHS, C1);
+  SDValue RHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C0);
+  SDValue RHS_1 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C1);
+  SDValue Result_LO = DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64),
+      LHS_0, LHS_1, RHS_0, RHS_1);
+  SDValue Result_HI(Result_LO.getNode(), 1);
+  return DAG.getNode(ISD::BUILD_PAIR, DL, N->getVTList(), Result_LO, Result_HI);
 }
 
 SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
@@ -2328,20 +2540,53 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 SDValue WebAssemblyTargetLowering::LowerSETCC(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  // The legalizer does not know how to expand the unsupported comparison modes
-  // of i64x2 vectors, so we manually unroll them here.
-  assert(Op->getOperand(0)->getSimpleValueType(0) == MVT::v2i64);
-  SmallVector<SDValue, 2> LHS, RHS;
-  DAG.ExtractVectorElements(Op->getOperand(0), LHS);
-  DAG.ExtractVectorElements(Op->getOperand(1), RHS);
-  const SDValue &CC = Op->getOperand(2);
-  auto MakeLane = [&](unsigned I) {
-    return DAG.getNode(ISD::SELECT_CC, DL, MVT::i64, LHS[I], RHS[I],
-                       DAG.getConstant(uint64_t(-1), DL, MVT::i64),
-                       DAG.getConstant(uint64_t(0), DL, MVT::i64), CC);
-  };
-  return DAG.getBuildVector(Op->getValueType(0), DL,
-                            {MakeLane(0), MakeLane(1)});
+  MVT Type = Op->getOperand(0)->getSimpleValueType(0);
+
+  if (Type == MVT::v2i64) {
+    // The legalizer does not know how to expand the unsupported comparison modes
+    // of i64x2 vectors, so we manually unroll them here.
+    SmallVector<SDValue, 2> LHS, RHS;
+    DAG.ExtractVectorElements(Op->getOperand(0), LHS);
+    DAG.ExtractVectorElements(Op->getOperand(1), RHS);
+    const SDValue &CC = Op->getOperand(2);
+    auto MakeLane = [&](unsigned I) {
+      return DAG.getNode(ISD::SELECT_CC, DL, MVT::i64, LHS[I], RHS[I],
+                         DAG.getConstant(uint64_t(-1), DL, MVT::i64),
+                         DAG.getConstant(uint64_t(0), DL, MVT::i64), CC);
+    };
+    return DAG.getBuildVector(Op->getValueType(0), DL,
+                              {MakeLane(0), MakeLane(1)});
+  }
+
+  if (Type == MVT::i128) {
+    SDValue LHS = Op->getOperand(0);
+    SDValue RHS = Op->getOperand(1);
+    SDValue CCValue = Op->getOperand(2);
+    const ISD::CondCode CC = cast<CondCodeSDNode>(CCValue)->get();
+    switch (CC) {
+      case ISD::SETULT:
+      case ISD::SETLT:
+      case ISD::SETUGT:
+      case ISD::SETGT:
+      case ISD::SETULE:
+      case ISD::SETLE:
+      case ISD::SETUGE:
+      case ISD::SETGE:
+        break;
+      default:
+        return SDValue();
+    }
+    SDValue C0 = DAG.getConstant(0, DL, MVT::i64);
+    SDValue C1 = DAG.getConstant(1, DL, MVT::i64);
+    SDValue LHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, LHS, C0);
+    SDValue LHS_1 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, LHS, C1);
+    SDValue RHS_0 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C0);
+    SDValue RHS_1 = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i64, RHS, C1);
+    SDValue Result = DAG.getNode(WebAssemblyISD::SETCC128, DL, MVT::i32,
+        LHS_0, LHS_1, RHS_0, RHS_1, CCValue);
+    return Result;
+  }
+  llvm_unreachable("cannot lower setcc with this type");
 }
 
 SDValue

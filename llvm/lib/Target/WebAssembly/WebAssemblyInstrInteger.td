@@ -129,3 +129,342 @@ def : Pat<(select (i32 (seteq I32:$cond, 0)), I32:$lhs, I32:$rhs),
           (SELECT_I32 I32:$rhs, I32:$lhs, I32:$cond)>;
 def : Pat<(select (i32 (seteq I32:$cond, 0)), I64:$lhs, I64:$rhs),
           (SELECT_I64 I64:$rhs, I64:$lhs, I32:$cond)>;
+
+let Predicates = [HasAlexMisc] in {
+defm I32_SWAP_BYTES : I<(outs I32:$dst), (ins I32:$src),
+                        (outs), (ins),
+                        [(set I32:$dst, (bswap I32:$src))],
+                        "i32.swap_bytes\t$dst, $src",
+                        "i32.swap_bytes",
+                        0xfc70>;
+defm I64_SWAP_BYTES : I<(outs I64:$dst), (ins I64:$src),
+                        (outs), (ins),
+                        [(set I64:$dst, (bswap I64:$src))],
+                        "i64.swap_bytes\t$dst, $src",
+                        "i64.swap_bytes",
+                        0xfc71>;
+defm I64_MUL_WIDE_S : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
+                        (outs), (ins),
+                        [],
+                         "i64.mul_wide_s\t$lo, $hi, $lhs, $rhs",
+                         "i64.mul_wide_s",
+                         0xfc72>;
+defm I64_MUL_WIDE_U : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
+                        (outs), (ins),
+                        [],
+                        "i64.mul_wide_u\t$lo, $hi, $lhs, $rhs",
+                        "i64.mul_wide_u",
+                        0xfc73>;
+defm I64_MUL_HIGH_U : I<(outs I64:$dst), (ins I64:$lhs, I64:$rhs),
+                        (outs), (ins),
+                        [(set I64:$dst, (mulhu I64:$lhs, I64:$rhs))],
+                        "i64.mul_high_u\t$dst, $lhs, $rhs",
+                        "i64.mul_high_u",
+                        0xfc6e>;
+defm I64_MUL_HIGH_S : I<(outs I64:$dst), (ins I64:$lhs, I64:$rhs),
+                        (outs), (ins),
+                        [(set I64:$dst, (mulhs I64:$lhs, I64:$rhs))],
+                        "i64.mul_high_s\t$dst, $lhs, $rhs",
+                        "i64.mul_high_s",
+                        0xfc6f>;
+} // Predicates = [HasAlexMisc]
+
+let Predicates = [HasAlexOverflow] in {
+defm I32_ADD_OVERFLOW_S : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i32.add_overflow_s\t$out, $oflow, $lhs, $rhs",
+                             "i32.add_overflow_s",
+                             0xfc74>;
+defm I32_ADD_OVERFLOW_U : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i32.add_overflow_u\t$out, $oflow, $lhs, $rhs",
+                             "i32.add_overflow_u",
+                             0xfc75>;
+defm I32_SUB_OVERFLOW_S : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i32.sub_overflow_s\t$out, $oflow, $lhs, $rhs",
+                             "i32.sub_overflow_s",
+                             0xfc76>;
+defm I32_SUB_OVERFLOW_U : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i32.sub_overflow_u\t$out, $oflow, $lhs, $rhs",
+                             "i32.sub_overflow_u",
+                             0xfc77>;
+defm I32_MUL_OVERFLOW_S : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i32.mul_overflow_s\t$out, $oflow, $lhs, $rhs",
+                             "i32.mul_overflow_s",
+                             0xfc78>;
+defm I32_MUL_OVERFLOW_U : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i32.mul_overflow_u\t$out, $oflow, $lhs, $rhs",
+                             "i32.mul_overflow_u",
+                             0xfc79>;
+
+defm I64_ADD_OVERFLOW_S : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i64.add_overflow_s\t$out, $oflow, $lhs, $rhs",
+                             "i64.add_overflow_s",
+                             0xfc7a>;
+defm I64_ADD_OVERFLOW_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i64.add_overflow_u\t$out, $oflow, $lhs, $rhs",
+                             "i64.add_overflow_u",
+                             0xfc7b>;
+defm I64_SUB_OVERFLOW_S : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i64.sub_overflow_s\t$out, $oflow, $lhs, $rhs",
+                             "i64.sub_overflow_s",
+                             0xfc7c>;
+defm I64_SUB_OVERFLOW_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i64.sub_overflow_u\t$out, $oflow, $lhs, $rhs",
+                             "i64.sub_overflow_u",
+                             0xfc7d>;
+defm I64_MUL_OVERFLOW_S : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i64.mul_overflow_s\t$out, $oflow, $lhs, $rhs",
+                             "i64.mul_overflow_s",
+                             0xfc7e>;
+defm I64_MUL_OVERFLOW_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs),
+                            (outs), (ins),
+                            [],
+                             "i64.mul_overflow_u\t$out, $oflow, $lhs, $rhs",
+                             "i64.mul_overflow_u",
+                             0xfc7f>;
+} // Predicates = [HasAlexOverflow]
+
+def wasm_mul_wide_s_t : SDTypeProfile<2, 2, []>;
+def wasm_mul_wide_s : SDNode<"WebAssemblyISD::I64_MUL_WIDE_S", wasm_mul_wide_s_t>;
+def wasm_mul_wide_u_t : SDTypeProfile<2, 2, []>;
+def wasm_mul_wide_u : SDNode<"WebAssemblyISD::I64_MUL_WIDE_U", wasm_mul_wide_u_t>;
+
+def : Pat<(wasm_mul_wide_s I64:$x, I64:$y),
+          (I64_MUL_WIDE_S $x, $y)>;
+def : Pat<(wasm_mul_wide_u I64:$x, I64:$y),
+          (I64_MUL_WIDE_U $x, $y)>;
+
+def wasm_i32_add_overflow_s_t : SDTypeProfile<2, 2, []>;
+def wasm_i32_add_overflow_s : SDNode<"WebAssemblyISD::I32_ADD_OVERFLOW_S", wasm_i32_add_overflow_s_t>;
+def : Pat<(wasm_i32_add_overflow_s I32:$x, I32:$y),
+          (I32_ADD_OVERFLOW_S $x, $y)>;
+
+def wasm_i32_add_overflow_u_t : SDTypeProfile<2, 2, []>;
+def wasm_i32_add_overflow_u : SDNode<"WebAssemblyISD::I32_ADD_OVERFLOW_U", wasm_i32_add_overflow_u_t>;
+def : Pat<(wasm_i32_add_overflow_u I32:$x, I32:$y),
+          (I32_ADD_OVERFLOW_U $x, $y)>;
+
+def wasm_i32_sub_overflow_s_t : SDTypeProfile<2, 2, []>;
+def wasm_i32_sub_overflow_s : SDNode<"WebAssemblyISD::I32_SUB_OVERFLOW_S", wasm_i32_sub_overflow_s_t>;
+def : Pat<(wasm_i32_sub_overflow_s I32:$x, I32:$y),
+          (I32_SUB_OVERFLOW_S $x, $y)>;
+
+def wasm_i32_sub_overflow_u_t : SDTypeProfile<2, 2, []>;
+def wasm_i32_sub_overflow_u : SDNode<"WebAssemblyISD::I32_SUB_OVERFLOW_U", wasm_i32_sub_overflow_u_t>;
+def : Pat<(wasm_i32_sub_overflow_u I32:$x, I32:$y),
+          (I32_SUB_OVERFLOW_U $x, $y)>;
+
+def wasm_i32_mul_overflow_s_t : SDTypeProfile<2, 2, []>;
+def wasm_i32_mul_overflow_s : SDNode<"WebAssemblyISD::I32_MUL_OVERFLOW_S", wasm_i32_mul_overflow_s_t>;
+def : Pat<(wasm_i32_mul_overflow_s I32:$x, I32:$y),
+          (I32_MUL_OVERFLOW_S $x, $y)>;
+
+def wasm_i32_mul_overflow_u_t : SDTypeProfile<2, 2, []>;
+def wasm_i32_mul_overflow_u : SDNode<"WebAssemblyISD::I32_MUL_OVERFLOW_U", wasm_i32_mul_overflow_u_t>;
+def : Pat<(wasm_i32_mul_overflow_u I32:$x, I32:$y),
+          (I32_MUL_OVERFLOW_U $x, $y)>;
+
+def wasm_i64_add_overflow_s_t : SDTypeProfile<2, 2, []>;
+def wasm_i64_add_overflow_s : SDNode<"WebAssemblyISD::I64_ADD_OVERFLOW_S", wasm_i64_add_overflow_s_t>;
+def : Pat<(wasm_i64_add_overflow_s I64:$x, I64:$y),
+          (I64_ADD_OVERFLOW_S $x, $y)>;
+
+def wasm_i64_add_overflow_u_t : SDTypeProfile<2, 2, []>;
+def wasm_i64_add_overflow_u : SDNode<"WebAssemblyISD::I64_ADD_OVERFLOW_U", wasm_i64_add_overflow_u_t>;
+def : Pat<(wasm_i64_add_overflow_u I64:$x, I64:$y),
+          (I64_ADD_OVERFLOW_U $x, $y)>;
+
+def wasm_i64_sub_overflow_s_t : SDTypeProfile<2, 2, []>;
+def wasm_i64_sub_overflow_s : SDNode<"WebAssemblyISD::I64_SUB_OVERFLOW_S", wasm_i64_sub_overflow_s_t>;
+def : Pat<(wasm_i64_sub_overflow_s I64:$x, I64:$y),
+          (I64_SUB_OVERFLOW_S $x, $y)>;
+
+def wasm_i64_sub_overflow_u_t : SDTypeProfile<2, 2, []>;
+def wasm_i64_sub_overflow_u : SDNode<"WebAssemblyISD::I64_SUB_OVERFLOW_U", wasm_i64_sub_overflow_u_t>;
+def : Pat<(wasm_i64_sub_overflow_u I64:$x, I64:$y),
+          (I64_SUB_OVERFLOW_U $x, $y)>;
+
+def wasm_i64_mul_overflow_s_t : SDTypeProfile<2, 2, []>;
+def wasm_i64_mul_overflow_s : SDNode<"WebAssemblyISD::I64_MUL_OVERFLOW_S", wasm_i64_mul_overflow_s_t>;
+def : Pat<(wasm_i64_mul_overflow_s I64:$x, I64:$y),
+          (I64_MUL_OVERFLOW_S $x, $y)>;
+
+def wasm_i64_mul_overflow_u_t : SDTypeProfile<2, 2, []>;
+def wasm_i64_mul_overflow_u : SDNode<"WebAssemblyISD::I64_MUL_OVERFLOW_U", wasm_i64_mul_overflow_u_t>;
+def : Pat<(wasm_i64_mul_overflow_u I64:$x, I64:$y),
+          (I64_MUL_OVERFLOW_U $x, $y)>;
+
+let Predicates = [HasAlexCarry] in {
+defm I32_ADD_WITH_CARRY_S : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i32.add_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i32.add_with_carry_s",
+                               0xfc50>;
+defm I32_ADD_WITH_CARRY_U : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i32.add_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i32.add_with_carry_u",
+                               0xfc51>;
+defm I32_SUB_WITH_CARRY_S : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i32.sub_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i32.sub_with_carry_s",
+                               0xfc52>;
+defm I32_SUB_WITH_CARRY_U : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i32.sub_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i32.sub_with_carry_u",
+                               0xfc53>;
+
+defm I64_ADD_WITH_CARRY_S : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i64.add_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i64.add_with_carry_s",
+                               0xfc54>;
+defm I64_ADD_WITH_CARRY_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i64.add_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i64.add_with_carry_u",
+                               0xfc55>;
+defm I64_SUB_WITH_CARRY_S : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i64.sub_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i64.sub_with_carry_s",
+                               0xfc56>;
+defm I64_SUB_WITH_CARRY_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i64.sub_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i64.sub_with_carry_u",
+                               0xfc57>;
+
+} // Predicates = [HasAlexCarry]
+
+def wasm_i32_add_with_carry_s_t : SDTypeProfile<2, 3, []>;
+def wasm_i32_add_with_carry_s : SDNode<"WebAssemblyISD::I32_ADD_WITH_CARRY_S", wasm_i32_add_with_carry_s_t>;
+def : Pat<(wasm_i32_add_with_carry_s I32:$x, I32:$y, I32:$carry),
+          (I32_ADD_WITH_CARRY_S $x, $y, $carry)>;
+
+def wasm_i32_add_with_carry_u_t : SDTypeProfile<2, 3, []>;
+def wasm_i32_add_with_carry_u : SDNode<"WebAssemblyISD::I32_ADD_WITH_CARRY_U", wasm_i32_add_with_carry_u_t>;
+def : Pat<(wasm_i32_add_with_carry_u I32:$x, I32:$y, I32:$carry),
+          (I32_ADD_WITH_CARRY_U $x, $y, $carry)>;
+
+def wasm_i32_sub_with_carry_s_t : SDTypeProfile<2, 3, []>;
+def wasm_i32_sub_with_carry_s : SDNode<"WebAssemblyISD::I32_SUB_WITH_CARRY_S", wasm_i32_sub_with_carry_s_t>;
+def : Pat<(wasm_i32_sub_with_carry_s I32:$x, I32:$y, I32:$carry),
+          (I32_SUB_WITH_CARRY_S $x, $y, $carry)>;
+
+def wasm_i32_sub_with_carry_u_t : SDTypeProfile<2, 3, []>;
+def wasm_i32_sub_with_carry_u : SDNode<"WebAssemblyISD::I32_SUB_WITH_CARRY_U", wasm_i32_sub_with_carry_u_t>;
+def : Pat<(wasm_i32_sub_with_carry_u I32:$x, I32:$y, I32:$carry),
+          (I32_SUB_WITH_CARRY_U $x, $y, $carry)>;
+
+def wasm_i64_add_with_carry_s_t : SDTypeProfile<2, 3, []>;
+def wasm_i64_add_with_carry_s : SDNode<"WebAssemblyISD::I64_ADD_WITH_CARRY_S", wasm_i64_add_with_carry_s_t>;
+def : Pat<(wasm_i64_add_with_carry_s I64:$x, I64:$y, I32:$carry),
+          (I64_ADD_WITH_CARRY_S $x, $y, $carry)>;
+
+def wasm_i64_add_with_carry_u_t : SDTypeProfile<2, 3, []>;
+def wasm_i64_add_with_carry_u : SDNode<"WebAssemblyISD::I64_ADD_WITH_CARRY_U", wasm_i64_add_with_carry_u_t>;
+def : Pat<(wasm_i64_add_with_carry_u I64:$x, I64:$y, I32:$carry),
+          (I64_ADD_WITH_CARRY_U $x, $y, $carry)>;
+
+def wasm_i64_sub_with_carry_s_t : SDTypeProfile<2, 3, []>;
+def wasm_i64_sub_with_carry_s : SDNode<"WebAssemblyISD::I64_SUB_WITH_CARRY_S", wasm_i64_sub_with_carry_s_t>;
+def : Pat<(wasm_i64_sub_with_carry_s I64:$x, I64:$y, I32:$carry),
+          (I64_SUB_WITH_CARRY_S $x, $y, $carry)>;
+
+def wasm_i64_sub_with_carry_u_t : SDTypeProfile<2, 3, []>;
+def wasm_i64_sub_with_carry_u : SDNode<"WebAssemblyISD::I64_SUB_WITH_CARRY_U", wasm_i64_sub_with_carry_u_t>;
+def : Pat<(wasm_i64_sub_with_carry_u I64:$x, I64:$y, I32:$carry),
+          (I64_SUB_WITH_CARRY_U $x, $y, $carry)>;
+
+let Predicates = [HasAlex128] in {
+defm I64_ADD128 : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs_lo, I64:$lhs_hi, I64:$rhs_lo, I64:$rhs_hi),
+                    (outs), (ins),
+                    [],
+                     "i64.add128\t$lo, $hi, $lhs_lo, $lhs_hi, $rhs_lo, $rhs_hi",
+                     "i64.add128",
+                     0xfc58>;
+defm I64_SUB128 : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs_lo, I64:$lhs_hi, I64:$rhs_lo, I64:$rhs_hi),
+                    (outs), (ins),
+                    [],
+                     "i64.sub128\t$lo, $hi, $lhs_lo, $lhs_hi, $rhs_lo, $rhs_hi",
+                     "i64.sub128",
+                     0xfc59>;
+defm I64_MUL128 : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs_lo, I64:$lhs_hi, I64:$rhs_lo, I64:$rhs_hi),
+                    (outs), (ins),
+                    [],
+                     "i64.mul128\t$lo, $hi, $lhs_lo, $lhs_hi, $rhs_lo, $rhs_hi",
+                     "i64.mul128",
+                     0xfc5a>;
+} // Predicates = [HasAlex128]
+
+def wasm_add128_t : SDTypeProfile<2, 4, []>;
+def wasm_add128 : SDNode<"WebAssemblyISD::I64_ADD128", wasm_add128_t>;
+def : Pat<(wasm_add128 I64:$a, I64:$b, I64:$c, I64:$d),
+          (I64_ADD128 $a, $b, $c, $d)>;
+
+def wasm_sub128_t : SDTypeProfile<2, 4, []>;
+def wasm_sub128 : SDNode<"WebAssemblyISD::I64_SUB128", wasm_sub128_t>;
+def : Pat<(wasm_sub128 I64:$a, I64:$b, I64:$c, I64:$d),
+          (I64_SUB128 $a, $b, $c, $d)>;
+
+def wasm_mul128_t : SDTypeProfile<2, 4, []>;
+def wasm_mul128 : SDNode<"WebAssemblyISD::I64_MUL128", wasm_mul128_t>;
+def : Pat<(wasm_mul128 I64:$a, I64:$b, I64:$c, I64:$d),
+          (I64_MUL128 $a, $b, $c, $d)>;
+
+// TODO: document this
+def SDT_SETCC128 : SDTypeProfile<1, 5, []>;
+def SETCC128 : SDNode<"WebAssemblyISD::SETCC128", SDT_SETCC128>;
+
+multiclass ComparisonInt128<CondCode cond, string name, bits<32> opcode> {
+  defm _I : I<(outs I32:$dst), (ins I64:$lhs_lo, I64:$lhs_hi, I64:$rhs_lo, I64:$rhs_hi),
+              (outs), (ins),
+              [(set I32:$dst, (SETCC128 I64:$lhs_lo, I64:$lhs_hi, I64:$rhs_lo, I64:$rhs_hi, cond))],
+              !strconcat(name, "\t$dst, $lhs_lo, $lhs_hi, $rhs_lo, $rhs_hi"),
+              name, opcode>;
+}
+
+let Predicates = [HasAlex128Cmp] in {
+
+defm I64_LT128_S : ComparisonInt128<SETLT,  "i64.lt128_s", 0xfc20>;
+defm I64_LT128_U : ComparisonInt128<SETULT, "i64.lt128_u", 0xfc21>;
+defm I64_GT128_S : ComparisonInt128<SETGT,  "i64.gt128_s", 0xfc22>;
+defm I64_GT128_U : ComparisonInt128<SETUGT, "i64.gt128_u", 0xfc23>;
+defm I64_LE128_S : ComparisonInt128<SETLE,  "i64.le128_s", 0xfc24>;
+defm I64_LE128_U : ComparisonInt128<SETULE, "i64.le128_u", 0xfc25>;
+defm I64_GE128_S : ComparisonInt128<SETGE,  "i64.ge128_s", 0xfc26>;
+defm I64_GE128_U : ComparisonInt128<SETUGE, "i64.ge128_u", 0xfc27>;
+
+} // Predicates = [HasAlex128Cmp]

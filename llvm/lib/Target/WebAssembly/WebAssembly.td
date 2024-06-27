@@ -78,6 +78,26 @@ def FeatureTailCall :
       SubtargetFeature<"tail-call", "HasTailCall", "true",
                        "Enable tail call instructions">;
 
+def FeatureAlexMisc :
+      SubtargetFeature<"alex-misc", "HasAlexMisc", "true",
+                       "Enable alex-misc">;
+
+def FeatureAlexOverflow :
+      SubtargetFeature<"alex-overflow", "HasAlexOverflow", "true",
+                       "Enable alex-overflow">;
+
+def FeatureAlexCarry :
+      SubtargetFeature<"alex-carry", "HasAlexCarry", "true",
+                       "Enable alex-carry">;
+
+def FeatureAlex128 :
+      SubtargetFeature<"alex128", "HasAlex128", "true",
+                       "Enable alex128">;
+
+def FeatureAlex128Cmp :
+      SubtargetFeature<"alex128cmp", "HasAlex128Cmp", "true",
+                       "Enable alex128cmp">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//
