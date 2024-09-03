@@ -45,7 +45,7 @@ BitVector
 WebAssemblyRegisterInfo::getReservedRegs(const MachineFunction & /*MF*/) const {
   BitVector Reserved(getNumRegs());
   for (auto Reg : {WebAssembly::SP32, WebAssembly::SP64, WebAssembly::FP32,
-                   WebAssembly::FP64})
+                   WebAssembly::FP64, WebAssembly::OFLOW_FLAG})
     Reserved.set(Reg);
   return Reserved;
 }

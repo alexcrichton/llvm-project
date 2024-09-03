@@ -123,8 +123,15 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
         }
       } else {
         // Track stack depth.
-        for (MachineOperand &MO : reverse(MI.explicit_uses())) {
-          if (MO.isReg() && MFI.isVRegStackified(MO.getReg())) {
+        for (MachineOperand &MO : reverse(MI.uses())) {
+          if (!MO.isReg() || MO.isDef())
+            continue;
+          Register Reg = MO.getReg();
+          if (MO.isImplicit() && !Reg.isVirtual())
+            continue;
+          if (MFI.isVRegStackified(Reg)) {
+            LLVM_DEBUG(MI.dump());
+            LLVM_DEBUG(MO.dump());
             auto Prev = Stack.back();
             Stack.pop_back();
             assert(Prev.Reg == MO.getReg() &&
@@ -144,9 +151,14 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
             }
           }
         }
-        for (MachineOperand &MO : MI.defs()) {
-          if (MO.isReg() && MFI.isVRegStackified(MO.getReg())) {
-            Stack.push_back({MO.getReg(), nullptr});
+        for (MachineOperand &MO : MI.all_defs()) {
+          if (!MO.isReg())
+            continue;
+          Register Reg = MO.getReg();
+          if (MO.isImplicit() && !Reg.isVirtual())
+            continue;
+          if (MFI.isVRegStackified(Reg)) {
+            Stack.push_back({Reg, nullptr});
           }
         }
       }

@@ -32,6 +32,9 @@ def FP64 : WebAssemblyReg<"%FP64">;
 def SP32 : WebAssemblyReg<"%SP32">;
 def SP64 : WebAssemblyReg<"%SP64">;
 
+// TODO
+def OFLOW_FLAG : WebAssemblyReg<"%OFLOW">;
+
 // The register allocation framework requires register classes have at least
 // one register, so we define a few for the integer / floating point register
 // classes since we otherwise don't need a physical register in those classes.
@@ -59,6 +62,9 @@ def ARGUMENTS : WebAssemblyReg<"ARGUMENTS">;
 //===----------------------------------------------------------------------===//
 //  Register classes
 //===----------------------------------------------------------------------===//
+
+let CopyCost = -1 in
+def FLAG : WebAssemblyRegClass<[i32], 32, (add OFLOW_FLAG)>;
 
 def I32 : WebAssemblyRegClass<[i32], 32, (add FP32, SP32, I32_0)>;
 def I64 : WebAssemblyRegClass<[i64], 64, (add FP64, SP64, I64_0)>;

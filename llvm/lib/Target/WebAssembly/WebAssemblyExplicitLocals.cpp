@@ -338,13 +338,17 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // Insert local.sets for any defs that aren't stackified yet.
-      for (auto &Def : MI.defs()) {
+      for (auto &Def : MI.all_defs()) {
         Register OldReg = Def.getReg();
+        bool isOflow = OldReg == WebAssembly::OFLOW_FLAG;
+        if (Def.isImplicit() && !isOflow)
+          continue;
         if (!MFI.isVRegStackified(OldReg)) {
-          const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
+          const TargetRegisterClass *RC = isOflow ?
+            &WebAssembly::I32RegClass : MRI.getRegClass(OldReg);
           Register NewReg = MRI.createVirtualRegister(RC);
           auto InsertPt = std::next(MI.getIterator());
-          if (UseEmpty[Register::virtReg2Index(OldReg)]) {
+          if (!isOflow && UseEmpty[Register::virtReg2Index(OldReg)]) {
             unsigned Opc = getDropOpcode(RC);
             MachineInstr *Drop =
                 BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))
@@ -375,11 +379,18 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 
       // Insert local.gets for any uses that aren't stackified yet.
       MachineInstr *InsertPt = &MI;
-      for (MachineOperand &MO : reverse(MI.explicit_uses())) {
+      for (MachineOperand &MO : reverse(MI.uses())) {
         if (!MO.isReg())
           continue;
 
         Register OldReg = MO.getReg();
+
+        if (MO.isImplicit()) {
+          if (OldReg != WebAssembly::OFLOW_FLAG)
+            continue;
+          if (MO.isDef())
+            continue;
+        }
 
         // Inline asm may have a def in the middle of the operands. Our contract
         // with inline asm register operands is to provide local indices as
@@ -413,7 +424,8 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 
         // Insert a local.get.
         unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
-        const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
+        const TargetRegisterClass *RC = OldReg == WebAssembly::OFLOW_FLAG ?
+          &WebAssembly::I32RegClass : MRI.getRegClass(OldReg);
         Register NewReg = MRI.createVirtualRegister(RC);
         unsigned Opc = getLocalGetOpcode(RC);
         // Use a InsertPt as our DebugLoc, since MI may be discontinuous from

@@ -162,6 +162,7 @@ MachineInstr *WebAssembly::findCatch(MachineBasicBlock *EHPad) {
 unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
   assert(RC != nullptr);
   switch (RC->getID()) {
+  case WebAssembly::FLAGRegClassID:
   case WebAssembly::I32RegClassID:
     return WebAssembly::COPY_I32;
   case WebAssembly::I64RegClassID:

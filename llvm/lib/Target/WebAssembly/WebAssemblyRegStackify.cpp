@@ -333,6 +333,11 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
   if (Def != DefI->defs().begin())
     return false;
 
+  for (const auto &Op : DefI->implicit_operands()) {
+    if (Op.isReg() && Op.getReg() == WebAssembly::OFLOW_FLAG)
+      return false;
+  }
+
   // If any subsequent def is used prior to the current value by the same
   // instruction in which the current value is used, we cannot
   // stackify. Stackifying in this case would require that def moving below the
@@ -379,7 +384,8 @@ static bool isSafeToMove(const MachineOperand *Def, const MachineOperand *Use,
     if (Reg.isPhysical()) {
       // Ignore ARGUMENTS; it's just used to keep the ARGUMENT_* instructions
       // from moving down, and we've already checked for that.
-      if (Reg == WebAssembly::ARGUMENTS)
+      // TODO: comment
+      if (Reg == WebAssembly::ARGUMENTS || Reg == WebAssembly::OFLOW_FLAG)
         continue;
       // If the physical register is never modified, ignore it.
       if (!MRI.isPhysRegModified(Reg))
