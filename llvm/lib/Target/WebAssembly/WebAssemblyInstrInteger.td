@@ -143,18 +143,6 @@ defm I64_SWAP_BYTES : I<(outs I64:$dst), (ins I64:$src),
                         "i64.swap_bytes\t$dst, $src",
                         "i64.swap_bytes",
                         0xfc71>;
-defm I64_MUL_WIDE_S : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
-                        (outs), (ins),
-                        [],
-                         "i64.mul_wide_s\t$lo, $hi, $lhs, $rhs",
-                         "i64.mul_wide_s",
-                         0xfc72>;
-defm I64_MUL_WIDE_U : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
-                        (outs), (ins),
-                        [],
-                        "i64.mul_wide_u\t$lo, $hi, $lhs, $rhs",
-                        "i64.mul_wide_u",
-                        0xfc73>;
 defm I64_MUL_HIGH_U : I<(outs I64:$dst), (ins I64:$lhs, I64:$rhs),
                         (outs), (ins),
                         [(set I64:$dst, (mulhu I64:$lhs, I64:$rhs))],
@@ -243,6 +231,70 @@ defm I64_MUL_OVERFLOW_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs
                              "i64.mul_overflow_u\t$out, $oflow, $lhs, $rhs",
                              "i64.mul_overflow_u",
                              0xfc7f>;
+
+defm I64_MUL_WIDE_S : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
+                        (outs), (ins),
+                        [],
+                         "i64.mul_wide_s\t$lo, $hi, $lhs, $rhs",
+                         "i64.mul_wide_s",
+                         0xfc72>;
+defm I64_MUL_WIDE_U : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
+                        (outs), (ins),
+                        [],
+                        "i64.mul_wide_u\t$lo, $hi, $lhs, $rhs",
+                        "i64.mul_wide_u",
+                        0xfc73>;
+
+defm I32_ADD_WITH_CARRY_S : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i32.add_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i32.add_with_carry_s",
+                               0xfc50>;
+defm I32_ADD_WITH_CARRY_U : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i32.add_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i32.add_with_carry_u",
+                               0xfc51>;
+defm I32_SUB_WITH_CARRY_S : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i32.sub_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i32.sub_with_carry_s",
+                               0xfc52>;
+defm I32_SUB_WITH_CARRY_U : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i32.sub_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i32.sub_with_carry_u",
+                               0xfc53>;
+
+defm I64_ADD_WITH_CARRY_S : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i64.add_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i64.add_with_carry_s",
+                               0xfc54>;
+defm I64_ADD_WITH_CARRY_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i64.add_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i64.add_with_carry_u",
+                               0xfc55>;
+defm I64_SUB_WITH_CARRY_S : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i64.sub_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i64.sub_with_carry_s",
+                               0xfc56>;
+defm I64_SUB_WITH_CARRY_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
+                              (outs), (ins),
+                              [],
+                               "i64.sub_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
+                               "i64.sub_with_carry_u",
+                               0xfc57>;
+
 } // Predicates = [HasAlexOverflow]
 
 def wasm_mul_wide_s_t : SDTypeProfile<2, 2, []>;
@@ -314,59 +366,6 @@ def wasm_i64_mul_overflow_u_t : SDTypeProfile<2, 2, []>;
 def wasm_i64_mul_overflow_u : SDNode<"WebAssemblyISD::I64_MUL_OVERFLOW_U", wasm_i64_mul_overflow_u_t>;
 def : Pat<(wasm_i64_mul_overflow_u I64:$x, I64:$y),
           (I64_MUL_OVERFLOW_U $x, $y)>;
-
-let Predicates = [HasAlexCarry] in {
-defm I32_ADD_WITH_CARRY_S : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
-                              (outs), (ins),
-                              [],
-                               "i32.add_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
-                               "i32.add_with_carry_s",
-                               0xfc50>;
-defm I32_ADD_WITH_CARRY_U : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
-                              (outs), (ins),
-                              [],
-                               "i32.add_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
-                               "i32.add_with_carry_u",
-                               0xfc51>;
-defm I32_SUB_WITH_CARRY_S : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
-                              (outs), (ins),
-                              [],
-                               "i32.sub_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
-                               "i32.sub_with_carry_s",
-                               0xfc52>;
-defm I32_SUB_WITH_CARRY_U : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
-                              (outs), (ins),
-                              [],
-                               "i32.sub_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
-                               "i32.sub_with_carry_u",
-                               0xfc53>;
-
-defm I64_ADD_WITH_CARRY_S : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
-                              (outs), (ins),
-                              [],
-                               "i64.add_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
-                               "i64.add_with_carry_s",
-                               0xfc54>;
-defm I64_ADD_WITH_CARRY_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
-                              (outs), (ins),
-                              [],
-                               "i64.add_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
-                               "i64.add_with_carry_u",
-                               0xfc55>;
-defm I64_SUB_WITH_CARRY_S : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
-                              (outs), (ins),
-                              [],
-                               "i64.sub_with_carry_s\t$out, $oflow, $lhs, $rhs, $carry",
-                               "i64.sub_with_carry_s",
-                               0xfc56>;
-defm I64_SUB_WITH_CARRY_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs, I32:$carry),
-                              (outs), (ins),
-                              [],
-                               "i64.sub_with_carry_u\t$out, $oflow, $lhs, $rhs, $carry",
-                               "i64.sub_with_carry_u",
-                               0xfc57>;
-
-} // Predicates = [HasAlexCarry]
 
 def wasm_i32_add_with_carry_s_t : SDTypeProfile<2, 3, []>;
 def wasm_i32_add_with_carry_s : SDNode<"WebAssemblyISD::I32_ADD_WITH_CARRY_S", wasm_i32_add_with_carry_s_t>;

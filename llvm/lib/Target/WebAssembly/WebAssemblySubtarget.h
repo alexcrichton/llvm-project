@@ -53,7 +53,6 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasTailCall = false;
   bool HasAlexMisc = false;
   bool HasAlexOverflow = false;
-  bool HasAlexCarry = false;
   bool HasAlex128 = false;
   bool HasAlex128Cmp = false;
 
@@ -113,7 +112,6 @@ public:
   bool hasTailCall() const { return HasTailCall; }
   bool hasAlexMisc() const { return HasAlexMisc; }
   bool hasAlexOverflow() const { return HasAlexOverflow; }
-  bool hasAlexCarry() const { return HasAlexCarry; }
   bool hasAlex128() const { return HasAlex128; }
   bool hasAlex128Cmp() const { return HasAlex128Cmp; }
 

@@ -84,21 +84,17 @@ def HasTailCall :
     Predicate<"Subtarget->hasTailCall()">,
     AssemblerPredicate<(all_of FeatureTailCall), "tail-call">;
 
-def HasAlexMisc :
-    Predicate<"Subtarget->hasAlexMisc()">,
-    AssemblerPredicate<(all_of FeatureAlexMisc), "alex-misc">;
-
 def HasAlexOverflow :
     Predicate<"Subtarget->hasAlexOverflow()">,
     AssemblerPredicate<(all_of FeatureAlexOverflow), "alex-overflow">;
 
-def HasAlexCarry :
-    Predicate<"Subtarget->hasAlexCarry()">,
-    AssemblerPredicate<(all_of FeatureAlexCarry), "alex-carry">;
-
 def HasAlex128 :
     Predicate<"Subtarget->hasAlex128()">,
     AssemblerPredicate<(all_of FeatureAlex128), "alex128">;
+
+def HasAlexMisc :
+    Predicate<"Subtarget->hasAlexMisc()">,
+    AssemblerPredicate<(all_of FeatureAlexMisc), "alex-misc">;
 
 def HasAlex128Cmp :
     Predicate<"Subtarget->hasAlex128Cmp()">,

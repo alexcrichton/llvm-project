@@ -166,8 +166,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   if (Subtarget->hasAlexMisc()) {
     setOperationAction(ISD::BSWAP, MVT::i32, Legal);
     setOperationAction(ISD::BSWAP, MVT::i64, Legal);
-    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Custom);
-    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Custom);
     setOperationAction(ISD::MULHS, MVT::i64, Legal);
     setOperationAction(ISD::MULHU, MVT::i64, Legal);
   }
@@ -178,14 +176,13 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
           ISD::UMULO})
       for (auto T : {MVT::i32, MVT::i64})
         setOperationAction(Op, T, Custom);
-  }
-
-  if (Subtarget->hasAlexCarry()) {
     for (auto Op :
          {ISD::UADDO_CARRY, ISD::SADDO_CARRY,
           ISD::USUBO_CARRY, ISD::SSUBO_CARRY})
       for (auto T : {MVT::i32, MVT::i64})
         setOperationAction(Op, T, Custom);
+    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Custom);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Custom);
   }
 
   if (Subtarget->hasAlex128()) {
@@ -1690,7 +1687,7 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
 
 SDValue WebAssemblyTargetLowering::LowerMUL_LOHI(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  assert(Subtarget->hasAlexMisc());
+  assert(Subtarget->hasAlexOverflow());
   assert(Op.getValueType() == MVT::i64);
   SDLoc DL(Op);
   unsigned Opcode;
@@ -1752,7 +1749,7 @@ SDValue WebAssemblyTargetLowering::LowerOverflowingOp(SDValue Op,
 
 SDValue WebAssemblyTargetLowering::LowerCarryOp(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  assert(Subtarget->hasAlexCarry());
+  assert(Subtarget->hasAlexOverflow());
   auto ValTy = Op.getValueType();
   assert(ValTy == MVT::i64 || ValTy == MVT::i32);
   SDLoc DL(Op);

@@ -86,10 +86,6 @@ def FeatureAlexOverflow :
       SubtargetFeature<"alex-overflow", "HasAlexOverflow", "true",
                        "Enable alex-overflow">;
 
-def FeatureAlexCarry :
-      SubtargetFeature<"alex-carry", "HasAlexCarry", "true",
-                       "Enable alex-carry">;
-
 def FeatureAlex128 :
       SubtargetFeature<"alex128", "HasAlex128", "true",
                        "Enable alex128">;
