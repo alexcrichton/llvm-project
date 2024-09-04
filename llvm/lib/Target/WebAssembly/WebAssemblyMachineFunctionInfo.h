@@ -132,8 +132,6 @@ public:
       VRegStackified.reset(I);
   }
   bool isVRegStackified(unsigned VReg) const {
-    if (VReg == WebAssembly::OFLOW_FLAG)
-      return false;
     auto I = Register::virtReg2Index(VReg);
     if (I >= VRegStackified.size())
       return false;

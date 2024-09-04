@@ -76,8 +76,7 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
   for (unsigned PReg = WebAssembly::NoRegister + 1;
        PReg < WebAssembly::NUM_TARGET_REGS; ++PReg) {
     // Skip fake registers that are never used explicitly.
-    if (PReg == WebAssembly::VALUE_STACK || PReg == WebAssembly::ARGUMENTS
-        || PReg == WebAssembly::OFLOW_FLAG)
+    if (PReg == WebAssembly::VALUE_STACK || PReg == WebAssembly::ARGUMENTS)
       continue;
 
     // Replace explicit uses of the physical register with a virtual register.

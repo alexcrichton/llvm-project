@@ -1745,7 +1745,8 @@ SDValue WebAssemblyTargetLowering::LowerOverflowingOp(SDValue Op,
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   SDValue Result = DAG.getNode(Opcode, DL, DAG.getVTList(ValTy, MVT::i32), LHS, RHS);
-  SDValue Ops[] = { Result, Result.getValue(1) };
+  SDValue Oflow(Result.getNode(), 1);
+  SDValue Ops[] = { Result, Oflow };
   return DAG.getMergeValues(Ops, DL);
 }
 
@@ -1776,8 +1777,8 @@ SDValue WebAssemblyTargetLowering::LowerCarryOp(SDValue Op,
   SDValue RHS = Op.getOperand(1);
   SDValue Carry = Op.getOperand(2);
   SDValue Result = DAG.getNode(Opcode, DL, DAG.getVTList(ValTy, MVT::i32), LHS, RHS, Carry);
-  /* SDValue Oflow(Result.getNode(), 1); */
-  SDValue Ops[] = { Result, Result.getValue(1) };
+  SDValue Oflow(Result.getNode(), 1);
+  SDValue Ops[] = { Result, Oflow };
   return DAG.getMergeValues(Ops, DL);
 }
 
