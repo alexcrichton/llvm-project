@@ -94,6 +94,10 @@ def FeatureAlex128Cmp :
       SubtargetFeature<"alex128cmp", "HasAlex128Cmp", "true",
                        "Enable alex128cmp">;
 
+def FeatureAlexMul128 :
+      SubtargetFeature<"alex-mul128", "HasAlexMul128", "true",
+                       "Enable alex-mul128">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//

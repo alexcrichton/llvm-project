@@ -100,6 +100,10 @@ def HasAlex128Cmp :
     Predicate<"Subtarget->hasAlex128Cmp()">,
     AssemblerPredicate<(all_of FeatureAlex128Cmp), "alex128cmp">;
 
+def HasAlexMul128 :
+    Predicate<"Subtarget->hasAlexMul128()">,
+    AssemblerPredicate<(all_of FeatureAlexMul128), "alex-mul128">;
+
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
 //===----------------------------------------------------------------------===//

@@ -186,8 +186,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   }
 
   if (Subtarget->hasAlex128()) {
+    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Custom);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Custom);
     setOperationAction(ISD::ADD, MVT::i128, Custom);
     setOperationAction(ISD::SUB, MVT::i128, Custom);
+  }
+  if (Subtarget->hasAlexMul128()) {
     setOperationAction(ISD::MUL, MVT::i128, Custom);
   }
 
@@ -1687,7 +1691,7 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
 
 SDValue WebAssemblyTargetLowering::LowerMUL_LOHI(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  assert(Subtarget->hasAlexOverflow());
+  assert(Subtarget->hasAlexOverflow() || Subtarget->hasAlex128());
   assert(Op.getValueType() == MVT::i64);
   SDLoc DL(Op);
   unsigned Opcode;
@@ -1781,19 +1785,21 @@ SDValue WebAssemblyTargetLowering::LowerCarryOp(SDValue Op,
 
 SDValue WebAssemblyTargetLowering::Replace128Op(SDNode *N,
                                                 SelectionDAG &DAG) const {
-  assert(Subtarget->hasAlex128());
   auto ValTy = N->getValueType(0);
   assert(ValTy == MVT::i128);
   SDLoc DL(N);
   unsigned Opcode;
   switch (N->getOpcode()) {
   case ISD::ADD:
+    assert(Subtarget->hasAlex128());
     Opcode = WebAssemblyISD::I64_ADD128;
     break;
   case ISD::SUB:
+    assert(Subtarget->hasAlex128());
     Opcode = WebAssemblyISD::I64_SUB128;
     break;
   case ISD::MUL:
+    assert(Subtarget->hasAlexMul128());
     Opcode = WebAssemblyISD::I64_MUL128;
     break;
   default:

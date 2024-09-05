@@ -232,19 +232,6 @@ defm I64_MUL_OVERFLOW_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$rhs
                              "i64.mul_overflow_u",
                              0xfc7f>;
 
-defm I64_MUL_WIDE_S : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
-                        (outs), (ins),
-                        [],
-                         "i64.mul_wide_s\t$lo, $hi, $lhs, $rhs",
-                         "i64.mul_wide_s",
-                         0xfc72>;
-defm I64_MUL_WIDE_U : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
-                        (outs), (ins),
-                        [],
-                        "i64.mul_wide_u\t$lo, $hi, $lhs, $rhs",
-                        "i64.mul_wide_u",
-                        0xfc73>;
-
 defm I32_ADD_WITH_CARRY_S : I<(outs I32:$out, I32:$oflow), (ins I32:$lhs, I32:$rhs, I32:$carry),
                               (outs), (ins),
                               [],
@@ -296,6 +283,20 @@ defm I64_SUB_WITH_CARRY_U : I<(outs I64:$out, I32:$oflow), (ins I64:$lhs, I64:$r
                                0xfc57>;
 
 } // Predicates = [HasAlexOverflow]
+
+// TODO: add a predicate when this proposal is more final
+defm I64_MUL_WIDE_S : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
+                        (outs), (ins),
+                        [],
+                         "i64.mul_wide_s\t$lo, $hi, $lhs, $rhs",
+                         "i64.mul_wide_s",
+                         0xfc72>;
+defm I64_MUL_WIDE_U : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
+                        (outs), (ins),
+                        [],
+                        "i64.mul_wide_u\t$lo, $hi, $lhs, $rhs",
+                        "i64.mul_wide_u",
+                        0xfc73>;
 
 def wasm_mul_wide_s_t : SDTypeProfile<2, 2, []>;
 def wasm_mul_wide_s : SDNode<"WebAssemblyISD::I64_MUL_WIDE_S", wasm_mul_wide_s_t>;
@@ -420,13 +421,16 @@ defm I64_SUB128 : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs_lo, I64:$lhs_hi, I64:
                      "i64.sub128\t$lo, $hi, $lhs_lo, $lhs_hi, $rhs_lo, $rhs_hi",
                      "i64.sub128",
                      0xfc59>;
+} // Predicates = [HasAlex128]
+
+let Predicates = [HasAlexMul128] in {
 defm I64_MUL128 : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs_lo, I64:$lhs_hi, I64:$rhs_lo, I64:$rhs_hi),
                     (outs), (ins),
                     [],
                      "i64.mul128\t$lo, $hi, $lhs_lo, $lhs_hi, $rhs_lo, $rhs_hi",
                      "i64.mul128",
                      0xfc5a>;
-} // Predicates = [HasAlex128]
+} // Predicates = [HasAlexMul128]
 
 def wasm_add128_t : SDTypeProfile<2, 4, []>;
 def wasm_add128 : SDNode<"WebAssemblyISD::I64_ADD128", wasm_add128_t>;
