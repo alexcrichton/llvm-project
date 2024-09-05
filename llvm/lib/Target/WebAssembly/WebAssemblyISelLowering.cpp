@@ -3118,6 +3118,38 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performOp128Combine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue Result_HI(N, 1);
+  if (!Result_HI.use_empty())
+    return SDValue();
+
+  SDLoc DL(N);
+
+  unsigned HalfOpcode;
+  switch (N->getOpcode()) {
+    default:
+      llvm_unreachable("unimplemented opcode");
+    case WebAssemblyISD::I64_ADD128:
+      HalfOpcode = ISD::ADD;
+      break;
+    case WebAssemblyISD::I64_SUB128:
+      HalfOpcode = ISD::SUB;
+      break;
+    case WebAssemblyISD::I64_MUL128:
+      HalfOpcode = ISD::MUL;
+      break;
+  }
+  auto &DAG = DCI.DAG;
+
+  SDValue LHS_LO = N->getOperand(0);
+  SDValue RHS_LO = N->getOperand(2);
+
+  SDValue LO = DAG.getNode(HalfOpcode, DL, MVT::i64, LHS_LO, RHS_LO);
+  SDValue HI = DAG.getNode(ISD::UNDEF, DL, MVT::i64);
+  return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), LO, HI);
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3143,5 +3175,9 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performVectorTruncZeroCombine(N, DCI);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);
+  case WebAssemblyISD::I64_ADD128:
+  case WebAssemblyISD::I64_MUL128:
+  case WebAssemblyISD::I64_SUB128:
+    return performOp128Combine(N, DCI);
   }
 }

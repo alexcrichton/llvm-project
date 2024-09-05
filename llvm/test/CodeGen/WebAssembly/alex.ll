@@ -115,3 +115,12 @@ define i128 @i64_mul_wide_u(i64 %a, i64 %b) {
   %c = mul i128 %a128, %b128
   ret i128 %c
 }
+
+define i64 @mul_i128_only_lo(i128 %a, i128 %b) {
+; I128-LABEL:  mul_i128_only_lo:
+; I128-NOT:    i64.mul128
+; I128:        i64.mul
+  %c = mul i128 %a, %b
+  %d = trunc i128 %c to i64
+  ret i64 %d
+}
