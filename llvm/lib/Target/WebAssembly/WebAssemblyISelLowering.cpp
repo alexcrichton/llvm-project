@@ -166,8 +166,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   }
 
   if (Subtarget->hasWideArithmetic()) {
-    setOperationAction(ISD::ADD, MVT::i128, Custom);
-    setOperationAction(ISD::SUB, MVT::i128, Custom);
+    /* setOperationAction(ISD::ADD, MVT::i128, Custom); */
+    /* setOperationAction(ISD::SUB, MVT::i128, Custom); */
     setOperationAction(ISD::SMUL_LOHI, MVT::i64, Custom);
     setOperationAction(ISD::UMUL_LOHI, MVT::i64, Custom);
     setOperationAction(ISD::UADDO, MVT::i64, Custom);
@@ -1110,6 +1110,16 @@ void WebAssemblyTargetLowering::computeKnownBitsForTargetNode(
     }
     }
   }
+  case WebAssemblyISD::I64_ADD_WIDE_S:
+  case WebAssemblyISD::I64_ADD_WIDE_U:
+    if (Op.getResNo() == 1)
+      Known.Zero.setBitsFrom(1);
+    break;
+  case WebAssemblyISD::I64_ADD3_WIDE_S:
+  case WebAssemblyISD::I64_ADD3_WIDE_U:
+    if (Op.getResNo() == 1)
+      Known.Zero.setBitsFrom(2);
+    break;
   }
 }
 
