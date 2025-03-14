@@ -1858,8 +1858,8 @@ SDValue WebAssemblyTargetLowering::LowerADDO_CARRY(SDValue Op,
   SDValue Result =
       DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64), A, B, C_I64);
   SDValue CarryI64(Result.getNode(), 1);
-  SDValue CarryI1 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, CarryI64);
-  SDValue Ops[] = {Result, CarryI1};
+  SDValue CarryI32 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, CarryI64);
+  SDValue Ops[] = {Result, CarryI32};
   return DAG.getMergeValues(Ops, DL);
 }
 

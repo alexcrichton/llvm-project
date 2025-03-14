@@ -180,6 +180,37 @@ define { i64, i64 } @add3_wide_u(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: add3_wide_u:
 ; CHECK:         .functype add3_wide_u (i32, i64, i64, i64) -> ()
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.add_wide_u
+; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.const 4294967295
+; CHECK-NEXT:    i64.and
+; CHECK-NEXT:    i64.add3_wide_u
+; CHECK-NEXT:    drop
+; CHECK-NEXT:    i64.store 8
+; CHECK-NEXT:    # fallthrough-return
+  %pair = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %ret1 = extractvalue { i64, i1 } %pair, 0
+  %carry = extractvalue { i64, i1 } %pair, 1
+  %carry64 = zext i1 %carry to i64
+  %ret2 = add i64 %c, %carry64
+
+  %t0 = insertvalue { i64, i64 } poison, i64 %ret1, 0
+  %t1 = insertvalue { i64, i64 } %t0, i64 %ret2, 1
+  ret { i64, i64 } %t1
+}
+
+define { i64, i64 } @add3_wide_u_via_combine(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: add3_wide_u_via_combine:
+; CHECK:         .functype add3_wide_u_via_combine (i32, i64, i64, i64) -> ()
+; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 3
