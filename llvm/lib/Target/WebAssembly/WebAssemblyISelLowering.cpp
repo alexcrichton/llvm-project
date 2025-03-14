@@ -170,6 +170,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setOperationAction(ISD::SUB, MVT::i128, Custom);
     setOperationAction(ISD::SMUL_LOHI, MVT::i64, Custom);
     setOperationAction(ISD::UMUL_LOHI, MVT::i64, Custom);
+    setOperationAction(ISD::UADDO, MVT::i64, Custom);
+    setOperationAction(ISD::SADDO, MVT::i64, Custom);
+    setOperationAction(ISD::UADDO_CARRY, MVT::i64, Custom);
+    setOperationAction(ISD::SADDO_CARRY, MVT::i64, Custom);
   }
 
   if (Subtarget->hasNontrappingFPToInt())
@@ -1676,6 +1680,12 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
     return LowerMUL_LOHI(Op, DAG);
+  case ISD::SADDO:
+  case ISD::UADDO:
+    return LowerADDO(Op, DAG);
+  case ISD::SADDO_CARRY:
+  case ISD::UADDO_CARRY:
+    return LowerADDO_CARRY(Op, DAG);
   }
 }
 
@@ -1792,10 +1802,64 @@ SDValue WebAssemblyTargetLowering::LowerMUL_LOHI(SDValue Op,
   }
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  SDValue Hi =
+  SDValue Lo =
       DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64), LHS, RHS);
-  SDValue Lo(Hi.getNode(), 1);
-  SDValue Ops[] = {Hi, Lo};
+  SDValue Hi(Lo.getNode(), 1);
+  SDValue Ops[] = {Lo, Hi};
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue WebAssemblyTargetLowering::LowerADDO(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  assert(Subtarget->hasWideArithmetic());
+  assert(Op.getValueType() == MVT::i64);
+  SDLoc DL(Op);
+  unsigned Opcode;
+  switch (Op.getOpcode()) {
+  case ISD::UADDO:
+    Opcode = WebAssemblyISD::I64_ADD_WIDE_U;
+    break;
+  case ISD::SADDO:
+    Opcode = WebAssemblyISD::I64_ADD_WIDE_S;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue Result =
+      DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64), LHS, RHS);
+  SDValue CarryI64(Result.getNode(), 1);
+  SDValue CarryI1 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, CarryI64);
+  SDValue Ops[] = {Result, CarryI1};
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue WebAssemblyTargetLowering::LowerADDO_CARRY(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  assert(Subtarget->hasWideArithmetic());
+  assert(Op.getValueType() == MVT::i64);
+  SDLoc DL(Op);
+  unsigned Opcode;
+  switch (Op.getOpcode()) {
+  case ISD::UADDO_CARRY:
+    Opcode = WebAssemblyISD::I64_ADD3_WIDE_U;
+    break;
+  case ISD::SADDO_CARRY:
+    Opcode = WebAssemblyISD::I64_ADD3_WIDE_S;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+  SDValue C_I1 = Op.getOperand(2);
+  SDValue C_I64 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, C_I1);
+  SDValue Result =
+      DAG.getNode(Opcode, DL, DAG.getVTList(MVT::i64, MVT::i64), A, B, C_I64);
+  SDValue CarryI64(Result.getNode(), 1);
+  SDValue CarryI1 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, CarryI64);
+  SDValue Ops[] = {Result, CarryI1};
   return DAG.getMergeValues(Ops, DL);
 }
 
@@ -3254,6 +3318,51 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
+// Look for add128(add128(a, 0, b, 0), c, 0) and transform that to add3_wide_u
+static SDValue performAdd128Combine(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+
+  SDLoc DL(N);
+  SDValue LHS_LO = N->getOperand(0);
+  SDValue LHS_HI = N->getOperand(1);
+  SDValue RHS_LO = N->getOperand(2);
+  SDValue RHS_HI = N->getOperand(3);
+
+  // We're interested when lhs comes from the same node (another add128), so if
+  // our lhs comes from two different nodes then swap the rhs/lhs to check lhs
+  // again.
+  if (LHS_LO.getNode() != LHS_HI.getNode()) {
+    std::swap(LHS_LO, RHS_LO);
+    std::swap(LHS_HI, RHS_HI);
+    if (LHS_LO.getNode() != LHS_HI.getNode()) {
+      return SDValue();
+    }
+  }
+
+  // Both LHS_{LO,HI} come from the same node, see if it's add128.
+  SDNode *LHS = LHS_LO.getNode();
+  if (LHS->getOpcode() != WebAssemblyISD::I64_ADD128)
+    return SDValue();
+
+  SDValue A_LO = LHS->getOperand(0);
+  SDValue A_HI = LHS->getOperand(1);
+  SDValue B_LO = LHS->getOperand(2);
+  SDValue B_HI = LHS->getOperand(3);
+
+  // Only interested in the case where the upper bits are all constant zeros,
+  // so test if that's the case.
+  if (!isNullConstant(A_HI) || !isNullConstant(B_HI) || !isNullConstant(RHS_HI))
+    return SDValue();
+
+
+  // And if all that has passed, let's swap this to `add3_wide_u`.
+  SDValue Result =
+      DAG.getNode(WebAssemblyISD::I64_ADD3_WIDE_U, DL,
+                 DAG.getVTList(MVT::i64, MVT::i64), A_LO, B_LO, RHS_LO);
+  return Result;
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3281,5 +3390,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performTruncateCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return performLowerPartialReduction(N, DCI.DAG);
+  case WebAssemblyISD::I64_ADD128:
+    return performAdd128Combine(N, DCI);
   }
 }

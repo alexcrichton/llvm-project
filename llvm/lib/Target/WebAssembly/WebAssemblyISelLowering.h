@@ -133,6 +133,8 @@ private:
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
   SDValue Replace128Op(SDNode *N, SelectionDAG &DAG) const;
+  SDValue LowerADDO(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerADDO_CARRY(SDValue Op, SelectionDAG &DAG) const;
 
   // Custom DAG combine hooks
   SDValue

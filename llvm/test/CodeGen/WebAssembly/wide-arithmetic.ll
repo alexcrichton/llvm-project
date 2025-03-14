@@ -130,3 +130,79 @@ define i64 @mul_i128_only_lo(i128 %a, i128 %b) {
   %d = trunc i128 %c to i64
   ret i64 %d
 }
+
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64)
+declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64)
+
+define { i64, i1 } @add_wide_s(i64 %a, i64 %b) {
+; CHECK-LABEL: add_wide_s:
+; CHECK:         .functype add_wide_s (i32, i64, i64) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.add_wide_s
+; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.wrap_i64
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.store8 8
+; CHECK-NEXT:    # fallthrough-return
+  %pair = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b)
+  ret { i64, i1 } %pair
+}
+
+define { i64, i1 } @add_wide_u(i64 %a, i64 %b) {
+; CHECK-LABEL: add_wide_u:
+; CHECK:         .functype add_wide_u (i32, i64, i64) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.add_wide_u
+; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32.wrap_i64
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32.and
+; CHECK-NEXT:    i32.store8 8
+; CHECK-NEXT:    # fallthrough-return
+  %pair = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  ret { i64, i1 } %pair
+}
+
+define { i64, i64 } @add3_wide_u(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: add3_wide_u:
+; CHECK:         .functype add3_wide_u (i32, i64, i64, i64) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.add3_wide_u
+; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    local.set 3
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.store 8
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %a128 = zext i64 %a to i128
+  %b128 = zext i64 %b to i128
+  %c128 = zext i64 %c to i128
+  %t0 = add i128 %a128, %b128
+  %t1 = add i128 %t0, %c128
+  %result = trunc i128 %t1 to i64
+  %t2 = lshr i128 %t1, 64
+  %carry = trunc i128 %t2 to i64
+
+  %ret0 = insertvalue { i64, i64 } poison, i64 %result, 0
+  %ret1 = insertvalue { i64, i64 } %ret0, i64 %carry, 1
+  ret { i64, i64 } %ret1
+}
